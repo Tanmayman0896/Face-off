@@ -1,0 +1,291 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { db } from "@/db";
+import { teams, tiers, questions, teamTiers, questionAttempts, teamQuestionRewards } from "@/db/schema";
+import { getAuthSession, getCurrentTeam } from "@/lib/auth";
+import { eq, and, sql, inArray } from "drizzle-orm";
+
+export interface SubmitAnswerParams {
+  questionId: string;
+  answer: string;
+}
+
+export interface SubmitAnswerResult {
+  success: boolean;
+  isCorrect?: boolean;
+  reward?: number;
+  tierCompleted?: boolean;
+  nextTierId?: string | null;
+  retriesRemaining?: number;
+  tierFailed?: boolean;
+  error?: string;
+}
+
+export async function submitAnswer({
+  questionId,
+  answer,
+}: SubmitAnswerParams): Promise<SubmitAnswerResult> {
+  try {
+    // 1. Authenticate user session & team
+    const session = await getAuthSession();
+    if (!session?.userId) {
+      return { success: false, error: "Unauthorized session. Please sign in." };
+    }
+
+    const team = await getCurrentTeam();
+    if (!team) {
+      return { success: false, error: "No active team found for this user." };
+    }
+
+    // 2. Fetch question record from DB
+    const [questionRecord] = await db
+      .select()
+      .from(questions)
+      .where(eq(questions.id, questionId))
+      .limit(1);
+
+    if (!questionRecord) {
+      return { success: false, error: "Question not found." };
+    }
+
+    // 3. Fetch team_tiers record
+    const [teamTierRecord] = await db
+      .select()
+      .from(teamTiers)
+      .where(
+        and(
+          eq(teamTiers.teamId, team.id),
+          eq(teamTiers.tierId, questionRecord.tierId)
+        )
+      )
+      .limit(1);
+
+    if (!teamTierRecord) {
+      return { success: false, error: "Tier record not found for team." };
+    }
+
+    if (
+      teamTierRecord.status === "LOCKED" ||
+      teamTierRecord.status === "FAILED" ||
+      (teamTierRecord.status !== "COMPLETED" && teamTierRecord.retriesRemaining <= 0)
+    ) {
+      return {
+        success: false,
+        error: "This tier is locked or failed. You cannot submit answers.",
+        tierFailed: true,
+      };
+    }
+
+    // Double-guard: For Tier > 1, verify previous tier is COMPLETED
+    const [currentTierRecord] = await db
+      .select({ tierNumber: tiers.tierNumber })
+      .from(tiers)
+      .where(eq(tiers.id, questionRecord.tierId))
+      .limit(1);
+
+    if (currentTierRecord && currentTierRecord.tierNumber > 1) {
+      const [prevTier] = await db
+        .select()
+        .from(tiers)
+        .where(eq(tiers.tierNumber, currentTierRecord.tierNumber - 1))
+        .limit(1);
+
+      if (prevTier) {
+        const [prevTeamTier] = await db
+          .select()
+          .from(teamTiers)
+          .where(and(eq(teamTiers.teamId, team.id), eq(teamTiers.tierId, prevTier.id)))
+          .limit(1);
+
+        if (!prevTeamTier || prevTeamTier.status !== "COMPLETED") {
+          return {
+            success: false,
+            error: "Tier access denied. Complete previous tier first.",
+          };
+        }
+      }
+    }
+
+    // 4. Validate answer (Case-insensitive & trimmed)
+    const normalizedSubmitted = (answer || "").trim().toLowerCase();
+    const normalizedCorrect = questionRecord.answer.trim().toLowerCase();
+    const isCorrect = normalizedSubmitted === normalizedCorrect;
+
+    // 5. Execute DB Transaction
+    const result = await db.transaction(async (tx) => {
+      // Record attempt
+      await tx.insert(questionAttempts).values({
+        teamId: team.id,
+        questionId: questionRecord.id,
+        tierId: questionRecord.tierId,
+        submittedAnswer: answer.trim(),
+        isCorrect,
+      });
+
+      if (isCorrect) {
+        // Check if reward already granted
+        const [existingReward] = await tx
+          .select()
+          .from(teamQuestionRewards)
+          .where(
+            and(
+              eq(teamQuestionRewards.teamId, team.id),
+              eq(teamQuestionRewards.questionId, questionRecord.id)
+            )
+          )
+          .limit(1);
+
+        let grantedReward = 0;
+        if (!existingReward) {
+          // Grant reward atomically
+          await tx.insert(teamQuestionRewards).values({
+            teamId: team.id,
+            questionId: questionRecord.id,
+            rewardAmount: questionRecord.reward,
+          });
+
+          await tx
+            .update(teams)
+            .set({
+              balance: sql`${teams.balance} + ${questionRecord.reward}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(teams.id, team.id));
+
+          grantedReward = questionRecord.reward;
+        }
+
+        // Count total solved questions for this tier
+        const tierQuestions = await tx
+          .select({ id: questions.id })
+          .from(questions)
+          .where(eq(questions.tierId, questionRecord.tierId));
+
+        const tierQuestionIds = tierQuestions.map((q) => q.id);
+        const solvedRecords = await tx
+          .select({ count: sql<number>`count(distinct ${teamQuestionRewards.questionId})::int` })
+          .from(teamQuestionRewards)
+          .where(
+            and(
+              eq(teamQuestionRewards.teamId, team.id),
+              inArray(teamQuestionRewards.questionId, tierQuestionIds)
+            )
+          );
+
+        const solvedCount = Number(solvedRecords[0]?.count ?? 0);
+        let tierCompleted = false;
+        let nextTierId: string | null = null;
+
+        if (tierQuestions.length > 0 && solvedCount >= tierQuestions.length) {
+          tierCompleted = true;
+          // Complete current tier
+          await tx
+            .update(teamTiers)
+            .set({
+              status: "COMPLETED",
+              completedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(teamTiers.id, teamTierRecord.id));
+
+          // Unlock next tier if available
+          const [currentTierInfo] = await tx
+            .select({ tierNumber: tiers.tierNumber })
+            .from(tiers)
+            .where(eq(tiers.id, questionRecord.tierId))
+            .limit(1);
+
+          if (currentTierInfo) {
+            const [nextTierRecord] = await tx
+              .select()
+              .from(tiers)
+              .where(eq(tiers.tierNumber, currentTierInfo.tierNumber + 1))
+              .limit(1);
+
+            if (nextTierRecord) {
+              nextTierId = nextTierRecord.id;
+              const [nextTeamTier] = await tx
+                .select()
+                .from(teamTiers)
+                .where(
+                  and(
+                    eq(teamTiers.teamId, team.id),
+                    eq(teamTiers.tierId, nextTierRecord.id)
+                  )
+                )
+                .limit(1);
+
+              if (nextTeamTier) {
+                if (nextTeamTier.status === "LOCKED") {
+                  await tx
+                    .update(teamTiers)
+                    .set({
+                      status: "UNLOCKED",
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(teamTiers.id, nextTeamTier.id));
+                }
+              } else {
+                await tx.insert(teamTiers).values({
+                  teamId: team.id,
+                  tierId: nextTierRecord.id,
+                  status: "UNLOCKED",
+                  retriesRemaining: 2,
+                });
+              }
+            }
+          }
+        }
+
+        return {
+          success: true,
+          isCorrect: true,
+          reward: grantedReward,
+          tierCompleted,
+          nextTierId,
+          retriesRemaining: teamTierRecord.retriesRemaining,
+        };
+      } else {
+        // INCORRECT
+        const newRetries = Math.max(0, teamTierRecord.retriesRemaining - 1);
+        const tierFailed = newRetries === 0;
+
+        await tx
+          .update(teamTiers)
+          .set({
+            retriesRemaining: newRetries,
+            status: tierFailed ? "FAILED" : teamTierRecord.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(teamTiers.id, teamTierRecord.id));
+
+        return {
+          success: true,
+          isCorrect: false,
+          retriesRemaining: newRetries,
+          tierFailed,
+        };
+      }
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath(`/tier/${questionRecord.tierId}`);
+
+    return result;
+  } catch (error: any) {
+    console.error("Error in submitAnswer:", error);
+    const errMessage = error?.message || "";
+    if (error?.code === "23505" || errMessage.toLowerCase().includes("unique") || errMessage.toLowerCase().includes("duplicate")) {
+      return {
+        success: false,
+        error: "This question has already been solved by your team.",
+      };
+    }
+    return {
+      success: false,
+      error: "An unexpected error occurred during answer validation.",
+    };
+  }
+}
+
