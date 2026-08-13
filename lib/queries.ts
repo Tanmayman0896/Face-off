@@ -82,12 +82,13 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         .from(questions)
         .where(eq(questions.tierId, tier.id));
 
-      const totalQuestions = questionsForTier.length;
-      const totalReward = questionsForTier.reduce((sum, q) => sum + q.reward, 0);
+      const totalQuestions = 1; // Under the new system, exactly 1 question per tier
+      const singleQuestionReward = questionsForTier[0]?.reward || 8000;
+      const totalReward = singleQuestionReward;
 
       // Count solved questions for team in this tier
       let solvedQuestions = 0;
-      if (totalQuestions > 0) {
+      if (questionsForTier.length > 0) {
         const questionIds = questionsForTier.map((q) => q.id);
         const solvedRecords = await db
           .select({ count: sql<number>`count(distinct ${teamQuestionRewards.questionId})::int` })
@@ -98,15 +99,15 @@ export async function getDashboardData(): Promise<DashboardData | null> {
               inArray(teamQuestionRewards.questionId, questionIds)
             )
           );
-        solvedQuestions = Number(solvedRecords[0]?.count ?? 0);
+        solvedQuestions = Number(solvedRecords[0]?.count ?? 0) > 0 ? 1 : 0;
       }
 
       // State machine logic for status
       let computedStatus = teamTierRecord.status as "LOCKED" | "UNLOCKED" | "COMPLETED" | "FAILED";
 
-      if (totalQuestions > 0 && solvedQuestions >= totalQuestions) {
+      if (solvedQuestions >= 1) {
         computedStatus = "COMPLETED";
-      } else if (teamTierRecord.retriesRemaining <= 0 && solvedQuestions < totalQuestions) {
+      } else if (teamTierRecord.retriesRemaining <= 0 && solvedQuestions < 1) {
         computedStatus = "FAILED";
       } else if (tier.tierNumber === 1) {
         if (computedStatus !== "COMPLETED" && computedStatus !== "FAILED") {
@@ -278,29 +279,49 @@ export async function getTierQuestionDetails(
       return { redirect: true };
     }
 
-    // 3. Fetch questions explicitly excluding `answer`
-    const tierQuestions = await db
-      .select({
-        id: questions.id,
-        tierId: questions.tierId,
-        question: questions.question,
-        reward: questions.reward,
-        createdAt: questions.createdAt,
-      })
-      .from(questions)
-      .where(eq(questions.tierId, tierId))
-      .orderBy(asc(questions.createdAt));
+    // 3. Ensure a single random question is assigned to this team for this tier
+    let assignedQuestionId = teamTierRecord.assignedQuestionId;
 
-    // 4. Fetch solved questions for this team
-    const questionIds = tierQuestions.map((q) => q.id);
-    const solvedRewards = questionIds.length > 0
+    if (!assignedQuestionId) {
+      const candidateQuestions = await db
+        .select({ id: questions.id })
+        .from(questions)
+        .where(eq(questions.tierId, tierId));
+
+      if (candidateQuestions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * candidateQuestions.length);
+        assignedQuestionId = candidateQuestions[randomIndex].id;
+
+        await db
+          .update(teamTiers)
+          .set({ assignedQuestionId, updatedAt: new Date() })
+          .where(eq(teamTiers.id, teamTierRecord.id));
+      }
+    }
+
+    // 4. Fetch the single assigned question
+    const tierQuestions = assignedQuestionId
+      ? await db
+          .select({
+            id: questions.id,
+            tierId: questions.tierId,
+            question: questions.question,
+            reward: questions.reward,
+            createdAt: questions.createdAt,
+          })
+          .from(questions)
+          .where(eq(questions.id, assignedQuestionId))
+      : [];
+
+    // 5. Fetch solved status for this assigned question
+    const solvedRewards = tierQuestions.length > 0
       ? await db
           .select({ questionId: teamQuestionRewards.questionId })
           .from(teamQuestionRewards)
           .where(
             and(
               eq(teamQuestionRewards.teamId, team.id),
-              inArray(teamQuestionRewards.questionId, questionIds)
+              eq(teamQuestionRewards.questionId, tierQuestions[0].id)
             )
           )
       : [];

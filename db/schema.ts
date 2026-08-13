@@ -52,6 +52,9 @@ export const teamTiers = pgTable(
     tierId: uuid("tier_id")
       .references(() => tiers.id, { onDelete: "cascade" })
       .notNull(),
+    assignedQuestionId: uuid("assigned_question_id").references(() => questions.id, {
+      onDelete: "set null",
+    }),
     status: varchar("status", { length: 50 }).notNull(), // 'LOCKED' | 'UNLOCKED' | 'COMPLETED' | 'FAILED'
     retriesRemaining: integer("retries_remaining").default(2).notNull(),
     completedAt: timestamp("completed_at"),

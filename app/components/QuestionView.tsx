@@ -152,7 +152,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
             {/* Index Counter */}
             <div className="flex items-center gap-3">
               <span className="bg-black text-white px-3 py-1 text-xs font-mono font-bold shadow-[2px_2px_0px_0px_#ccff00]">
-                Question {activeQuestionIndex + 1} / {questions.length}
+                {questions.length === 1 ? "ASSIGNED TIER QUESTION" : `Question ${activeQuestionIndex + 1} / ${questions.length}`}
               </span>
               {currentQuestion?.isSolved && (
                 <span className="bg-[#ccff00] text-black border border-black px-2 py-0.5 text-xs font-black uppercase shadow-[2px_2px_0px_0px_#000]">
@@ -178,104 +178,106 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
             </div>
           </div>
 
-          {/* Question Selector Tabs & Pagination */}
-          <div className="space-y-3 pt-1">
-            {/* Pagination Controls Bar */}
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 border-2 border-black">
-                <div className="text-xs font-mono font-bold uppercase text-slate-700 flex items-center gap-2">
-                  <span className="bg-black text-white px-2 py-0.5 text-[11px] font-mono shadow-[1px_1px_0px_0px_#ccff00]">
-                    PAGE {currentPage} OF {totalPages}
-                  </span>
-                  <span className="text-[11px]">
-                    (Q{(currentPage - 1) * QUESTIONS_PER_PAGE + 1} - Q
-                    {Math.min(currentPage * QUESTIONS_PER_PAGE, questions.length)})
-                  </span>
+          {/* Question Selector Tabs & Pagination (Only shown when multiple questions exist) */}
+          {questions.length > 1 && (
+            <div className="space-y-3 pt-1">
+              {/* Pagination Controls Bar */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 border-2 border-black">
+                  <div className="text-xs font-mono font-bold uppercase text-slate-700 flex items-center gap-2">
+                    <span className="bg-black text-white px-2 py-0.5 text-[11px] font-mono shadow-[1px_1px_0px_0px_#ccff00]">
+                      PAGE {currentPage} OF {totalPages}
+                    </span>
+                    <span className="text-[11px]">
+                      (Q{(currentPage - 1) * QUESTIONS_PER_PAGE + 1} - Q
+                      {Math.min(currentPage * QUESTIONS_PER_PAGE, questions.length)})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
+                    >
+                      &larr; Prev
+                    </button>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                      const isCurrent = pageNum === currentPage;
+                      const pageStartIdx = (pageNum - 1) * QUESTIONS_PER_PAGE;
+                      const pageEndIdx = Math.min(pageNum * QUESTIONS_PER_PAGE, questions.length);
+                      const pageQuestions = questions.slice(pageStartIdx, pageEndIdx);
+                      const allSolved =
+                        pageQuestions.length > 0 && pageQuestions.every((q) => q.isSolved);
+
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-2.5 py-1 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_#000] transition cursor-pointer ${
+                            isCurrent
+                              ? "bg-[#00f0ff] text-black"
+                              : allSolved
+                              ? "bg-[#ccff00]/60 text-black hover:bg-[#ccff00]"
+                              : "bg-white text-black hover:bg-slate-200"
+                          }`}
+                        >
+                          {pageNum} {allSolved && "✓"}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
+                    >
+                      Next &rarr;
+                    </button>
+                  </div>
                 </div>
+              )}
 
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    type="button"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
-                  >
-                    &larr; Prev
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
-                    const isCurrent = pageNum === currentPage;
-                    const pageStartIdx = (pageNum - 1) * QUESTIONS_PER_PAGE;
-                    const pageEndIdx = Math.min(pageNum * QUESTIONS_PER_PAGE, questions.length);
-                    const pageQuestions = questions.slice(pageStartIdx, pageEndIdx);
-                    const allSolved =
-                      pageQuestions.length > 0 && pageQuestions.every((q) => q.isSolved);
+              {/* Question Buttons Grid */}
+              <div className="grid grid-cols-2 min-[440px]:grid-cols-5 sm:grid-cols-10 gap-2">
+                {questions
+                  .slice((currentPage - 1) * QUESTIONS_PER_PAGE, currentPage * QUESTIONS_PER_PAGE)
+                  .map((q, localIdx) => {
+                    const globalIdx = (currentPage - 1) * QUESTIONS_PER_PAGE + localIdx;
+                    const isActive = globalIdx === activeQuestionIndex;
+                    const isSolved = q.isSolved;
 
                     return (
                       <button
-                        key={pageNum}
+                        key={q.id}
                         type="button"
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`px-2.5 py-1 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_#000] transition cursor-pointer ${
-                          isCurrent
+                        onClick={() => {
+                          setActiveQuestionIndex(globalIdx);
+                          setFeedback(null);
+                          setAnswerInput("");
+                        }}
+                        className={`py-2 px-1 text-center font-black border-2 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer ${
+                          isActive
                             ? "bg-[#00f0ff] text-black"
-                            : allSolved
+                            : isSolved
                             ? "bg-[#ccff00]/60 text-black hover:bg-[#ccff00]"
-                            : "bg-white text-black hover:bg-slate-200"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                         }`}
                       >
-                        {pageNum} {allSolved && "✓"}
+                        <div className="text-xs truncate">Q{globalIdx + 1}</div>
+                        <div className="text-[10px] opacity-90 font-mono truncate">
+                          {isSolved ? "✓" : `+$${q.reward}`}
+                        </div>
                       </button>
                     );
                   })}
-
-                  <button
-                    type="button"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
-                  >
-                    Next &rarr;
-                  </button>
-                </div>
               </div>
-            )}
-
-            {/* Question Buttons Grid (10 per page) */}
-            <div className="grid grid-cols-2 min-[440px]:grid-cols-5 sm:grid-cols-10 gap-2">
-              {questions
-                .slice((currentPage - 1) * QUESTIONS_PER_PAGE, currentPage * QUESTIONS_PER_PAGE)
-                .map((q, localIdx) => {
-                  const globalIdx = (currentPage - 1) * QUESTIONS_PER_PAGE + localIdx;
-                  const isActive = globalIdx === activeQuestionIndex;
-                  const isSolved = q.isSolved;
-
-                  return (
-                    <button
-                      key={q.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveQuestionIndex(globalIdx);
-                        setFeedback(null);
-                        setAnswerInput("");
-                      }}
-                      className={`py-2 px-1 text-center font-black border-2 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer ${
-                        isActive
-                          ? "bg-[#00f0ff] text-black"
-                          : isSolved
-                          ? "bg-[#ccff00]/60 text-black hover:bg-[#ccff00]"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
-                    >
-                      <div className="text-xs truncate">Q{globalIdx + 1}</div>
-                      <div className="text-[10px] opacity-90 font-mono truncate">
-                        {isSolved ? "✓" : `+$${q.reward}`}
-                      </div>
-                    </button>
-                  );
-                })}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Failed Banner */}

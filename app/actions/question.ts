@@ -212,7 +212,7 @@ export async function submitAnswer({
         let tierCompleted = false;
         let nextTierId: string | null = null;
 
-        if (tierQuestions.length > 0 && solvedCount >= tierQuestions.length) {
+        if (solvedCount >= 1) {
           tierCompleted = true;
           // Complete current tier
           await tx
