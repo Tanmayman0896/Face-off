@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getDashboardData } from "@/lib/queries";
-import { signOutAction } from "@/app/actions/auth";
 import FootballLogo from "@/app/components/FootballLogo";
+import SignOutButton from "@/app/components/SignOutButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,14 +50,7 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="px-4 py-3 bg-[#ff4d4d] text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[3px_3px_0px_0px_#000] hover:bg-black transition cursor-pointer"
-              >
-                Sign Out
-              </button>
-            </form>
+            <SignOutButton />
           </div>
         </header>
 

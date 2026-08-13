@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { completeOnboarding, signOutAction } from "@/app/actions/auth";
 import FootballLogo from "@/app/components/FootballLogo";
+import { useLoading } from "@/app/context/LoadingContext";
 
 gsap.registerPlugin(useGSAP);
 
@@ -16,6 +17,7 @@ interface OnboardingFormProps {
 export default function OnboardingForm({ userId, email }: OnboardingFormProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showLoading } = useLoading();
 
   useGSAP(
     () => {
@@ -45,10 +47,15 @@ export default function OnboardingForm({ userId, email }: OnboardingFormProps) {
                 <p className="text-xs font-mono font-bold text-slate-600">STEP 2: AUTH CONNECTED</p>
               </div>
             </div>
-            <form action={signOutAction}>
+            <form
+              action={async () => {
+                showLoading("SIGNING OUT...");
+                await signOutAction();
+              }}
+            >
               <button
                 type="submit"
-                className="text-xs font-black uppercase tracking-wider bg-[#ff4d4d] text-white px-3 py-1.5 border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:bg-black transition"
+                className="text-xs font-black uppercase tracking-wider bg-[#ff4d4d] text-white px-3 py-1.5 border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:bg-black transition cursor-pointer"
               >
                 Sign Out
               </button>
@@ -73,6 +80,7 @@ export default function OnboardingForm({ userId, email }: OnboardingFormProps) {
           <form
             action={async (formData) => {
               setIsSubmitting(true);
+              showLoading("REGISTERING TEAM & UNLOCKING TIER 1...");
               await completeOnboarding(formData);
             }}
             className="space-y-5"

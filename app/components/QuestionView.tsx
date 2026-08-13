@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import FootballLogo from "./FootballLogo";
+import FaceoffPreloader from "./FaceoffPreloader";
+import { useLoading } from "@/app/context/LoadingContext";
 import { SafeQuestion, TierQuestionPageData } from "@/lib/queries";
 import { submitAnswer, SubmitAnswerResult } from "@/app/actions/question";
 
@@ -16,6 +18,7 @@ const QUESTIONS_PER_PAGE = 10;
 export default function QuestionView({ initialData }: QuestionViewProps) {
   const router = useRouter();
   const { team, tier, questions: initialQuestions } = initialData;
+  const { showLoading, hideLoading } = useLoading();
 
   const [questions, setQuestions] = useState<SafeQuestion[]>(initialQuestions);
   const [currentRetries, setCurrentRetries] = useState<number>(tier.retriesRemaining);
@@ -55,42 +58,47 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
 
     setIsSubmitting(true);
     setFeedback(null);
+    showLoading("VALIDATING ANSWER ON SERVER...");
 
-    const res = await submitAnswer({
-      questionId: currentQuestion.id,
-      answer: answerInput.trim(),
-    });
+    try {
+      const res = await submitAnswer({
+        questionId: currentQuestion.id,
+        answer: answerInput.trim(),
+      });
 
-    setIsSubmitting(false);
-    setFeedback(res);
+      setIsSubmitting(false);
+      setFeedback(res);
 
-    if (res.success) {
-      if (res.isCorrect) {
-        // Mark current question as solved
-        setQuestions((prev) =>
-          prev.map((q, idx) =>
-            idx === activeQuestionIndex ? { ...q, isSolved: true } : q
-          )
-        );
+      if (res.success) {
+        if (res.isCorrect) {
+          // Mark current question as solved
+          setQuestions((prev) =>
+            prev.map((q, idx) =>
+              idx === activeQuestionIndex ? { ...q, isSolved: true } : q
+            )
+          );
 
-        if (res.reward && res.reward > 0) {
-          setBalance((prev) => prev + res.reward!);
-        }
+          if (res.reward && res.reward > 0) {
+            setBalance((prev) => prev + res.reward!);
+          }
 
-        if (res.tierCompleted) {
-          setTierStatus("COMPLETED");
-        }
+          if (res.tierCompleted) {
+            setTierStatus("COMPLETED");
+          }
 
-        setAnswerInput("");
-      } else {
-        // Incorrect
-        if (res.retriesRemaining !== undefined) {
-          setCurrentRetries(res.retriesRemaining);
-        }
-        if (res.tierFailed) {
-          setTierStatus("FAILED");
+          setAnswerInput("");
+        } else {
+          // Incorrect
+          if (res.retriesRemaining !== undefined) {
+            setCurrentRetries(res.retriesRemaining);
+          }
+          if (res.tierFailed) {
+            setTierStatus("FAILED");
+          }
         }
       }
+    } finally {
+      hideLoading();
     }
   }
 

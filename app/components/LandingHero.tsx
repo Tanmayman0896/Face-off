@@ -6,12 +6,14 @@ import gsap from "gsap";
 import { signInAction } from "@/app/actions/auth";
 
 import FootballLogo from "@/app/components/FootballLogo";
+import { useLoading } from "@/app/context/LoadingContext";
 
 gsap.registerPlugin(useGSAP);
 
 export default function LandingHero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const { showLoading } = useLoading();
 
   useGSAP(
     () => {
@@ -142,7 +144,13 @@ export default function LandingHero() {
               Enter your email or player identifier to start onboarding.
             </p>
 
-            <form action={signInAction} className="space-y-4">
+            <form
+              action={async (formData) => {
+                showLoading("AUTHENTICATING PLAYER & CONNECTING TO STADIUM...");
+                await signInAction(formData);
+              }}
+              className="space-y-4"
+            >
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-2">
                   Player Email / ID

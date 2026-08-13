@@ -13,7 +13,7 @@ export default function FootballLogo({ size = "md" }: { size?: "sm" | "md" | "lg
 
   return (
     <div
-      className={`bg-[#ffe600] border-black flex items-center justify-center font-black transition-transform ${containerClasses}`}
+      className={`bg-[#ffe600] border-black flex items-center justify-center font-black ${containerClasses}`}
     >
       <svg
         className={`${svgClasses} text-black`}

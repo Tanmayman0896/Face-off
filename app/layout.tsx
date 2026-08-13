@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { Suspense } from "react";
+import { LoadingProvider } from "@/app/context/LoadingContext";
+import PageNavigationLoader from "@/app/components/PageNavigationLoader";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,7 +28,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <LoadingProvider>
+          <Suspense fallback={null}>
+            <PageNavigationLoader />
+          </Suspense>
+          {children}
+        </LoadingProvider>
+      </body>
     </html>
   );
 }
+

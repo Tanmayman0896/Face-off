@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import FootballLogo from "./FootballLogo";
+import SignOutButton from "./SignOutButton";
+import FaceoffPreloader from "./FaceoffPreloader";
+import { useLoading } from "@/app/context/LoadingContext";
 import { buyPlayerAction } from "@/app/actions/marketplace";
-import { signOutAction } from "@/app/actions/auth";
 
 export interface PlayerData {
   id: string;
@@ -45,6 +47,7 @@ export default function MarketplaceView({
   const [team, setTeam] = useState(initialTeam);
   const [players, setPlayers] = useState(initialPlayers);
   const [ownedCount, setOwnedCount] = useState(initialOwnedCount);
+  const { showLoading, hideLoading } = useLoading();
 
   // Filters
   const [viewMode, setViewMode] = useState<"catalog" | "squad">("catalog");
@@ -110,42 +113,47 @@ export default function MarketplaceView({
   const handleBuyPlayer = async (player: PlayerData) => {
     setIsSubmitting(true);
     setFeedback(null);
+    showLoading(`SIGNING ${player.playerName.toUpperCase()} TO ${team.teamName.toUpperCase()}...`);
 
-    const res = await buyPlayerAction(player.id);
+    try {
+      const res = await buyPlayerAction(player.id);
 
-    if (res.success && res.newBalance !== undefined) {
-      // Update local state database reflection
-      setTeam((prev) => ({ ...prev, balance: res.newBalance! }));
-      setPlayers((prev) =>
-        prev.map((p) => (p.id === player.id ? { ...p, isOwned: true } : p))
-      );
-      setOwnedCount((prev) => prev + 1);
-
-      setFeedback({
-        type: "success",
-        message: `🎉 SUCCESS! ${player.playerName} has signed for ${team.teamName}!`,
-      });
-
-      // Animate purchase success
-      if (successBadgeRef.current) {
-        gsap.fromTo(
-          successBadgeRef.current,
-          { scale: 0.5, opacity: 0, rotation: -10 },
-          { scale: 1, opacity: 1, rotation: 0, duration: 0.4, ease: "elastic.out(1, 0.5)" }
+      if (res.success && res.newBalance !== undefined) {
+        // Update local state database reflection
+        setTeam((prev) => ({ ...prev, balance: res.newBalance! }));
+        setPlayers((prev) =>
+          prev.map((p) => (p.id === player.id ? { ...p, isOwned: true } : p))
         );
-      }
+        setOwnedCount((prev) => prev + 1);
 
-      setTimeout(() => {
-        setSelectedPlayer(null);
-        setFeedback(null);
+        setFeedback({
+          type: "success",
+          message: `🎉 SUCCESS! ${player.playerName} has signed for ${team.teamName}!`,
+        });
+
+        // Animate purchase success
+        if (successBadgeRef.current) {
+          gsap.fromTo(
+            successBadgeRef.current,
+            { scale: 0.5, opacity: 0, rotation: -10 },
+            { scale: 1, opacity: 1, rotation: 0, duration: 0.4, ease: "elastic.out(1, 0.5)" }
+          );
+        }
+
+        setTimeout(() => {
+          setSelectedPlayer(null);
+          setFeedback(null);
+          setIsSubmitting(false);
+        }, 1500);
+      } else {
+        setFeedback({
+          type: "error",
+          message: res.error || "Failed to purchase player.",
+        });
         setIsSubmitting(false);
-      }, 1500);
-    } else {
-      setFeedback({
-        type: "error",
-        message: res.error || "Failed to purchase player.",
-      });
-      setIsSubmitting(false);
+      }
+    } finally {
+      hideLoading();
     }
   };
 
@@ -210,14 +218,7 @@ export default function MarketplaceView({
               </div>
             </div>
 
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="px-4 py-3 bg-[#ff4d4d] text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[3px_3px_0px_0px_#000] hover:bg-black transition cursor-pointer"
-              >
-                Sign Out
-              </button>
-            </form>
+            <SignOutButton />
           </div>
         </header>
 
