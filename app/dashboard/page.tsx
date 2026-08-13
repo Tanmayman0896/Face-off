@@ -70,7 +70,7 @@ export default async function DashboardPage() {
               </span>
               <Link
                 href="/marketplace"
-                className="px-4 py-2 bg-[#00f0ff] hover:bg-black hover:text-white text-black font-black uppercase text-xs sm:text-sm border-3 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2 bg-[#00f0ff] text-black font-black uppercase text-xs sm:text-sm border-3 border-black shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <span>⚽ Marketplace</span>
               </Link>
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
                     {isUnlocked ? (
                       <Link
                         href={`/tier/${tt.tierId}`}
-                        className="block w-full text-center py-3 bg-[#00f0ff] hover:bg-black hover:text-white text-black font-black uppercase text-sm border-2 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer"
+                        className="block w-full text-center py-3 bg-[#00f0ff] text-black font-black uppercase text-sm border-2 border-black shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
                       >
                         [ {tt.solvedQuestions > 0 ? "Continue" : "Start Tier"} ]
                       </Link>

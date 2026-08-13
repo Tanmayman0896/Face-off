@@ -147,7 +147,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
 
             <Link
               href="/dashboard"
-              className="px-3 py-1.5 bg-white hover:bg-black hover:text-white text-black border-2 border-black shadow-[3px_3px_0px_0px_#000] text-xs font-black uppercase tracking-wider transition cursor-pointer"
+              className="px-3 py-1.5 bg-white hover:bg-black hover:text-white text-black border-2 border-black shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-xs font-black uppercase tracking-wider cursor-pointer"
             >
               &larr; Dashboard
             </Link>
@@ -207,7 +207,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
                       type="button"
                       disabled={currentPage === 1}
                       onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                      className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
+                      className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
                     >
                       &larr; Prev
                     </button>
@@ -225,7 +225,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
                           key={pageNum}
                           type="button"
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`px-2.5 py-1 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_#000] transition cursor-pointer ${
+                          className={`px-2.5 py-1 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer ${
                             isCurrent
                               ? "bg-[#00f0ff] text-black"
                               : allSolved
@@ -242,7 +242,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
                       type="button"
                       disabled={currentPage === totalPages}
                       onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                      className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
+                      className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-30 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
                     >
                       Next &rarr;
                     </button>
@@ -268,7 +268,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
                           setFeedback(null);
                           setAnswerInput("");
                         }}
-                        className={`py-2 px-1 text-center font-black border-2 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer ${
+                        className={`py-2 px-1 text-center font-black border-2 border-black shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer ${
                           isActive
                             ? "bg-[#00f0ff] text-black"
                             : isSolved
@@ -293,15 +293,26 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
           <div className="bg-[#ff4d4d] text-white border-4 border-black p-8 shadow-[8px_8px_0px_0px_#000] space-y-4 text-center">
             <h2 className="text-3xl font-black uppercase tracking-tight">✕ Tier Failed!</h2>
             <p className="text-sm font-bold max-w-lg mx-auto leading-relaxed">
-              You have exhausted all retries for this tier. Tier status has been marked as FAILED.
+              You have exhausted all retries for Tier {tier.tierNumber}.
+              {tier.tierNumber < 3
+                ? ` Don't worry — Tier ${tier.tierNumber + 1} has been unlocked for your team!`
+                : " This was the final tier."}
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap justify-center gap-4">
               <Link
                 href="/dashboard"
-                className="inline-block px-6 py-3 bg-black text-white hover:bg-white hover:text-black font-black uppercase text-sm border-2 border-black shadow-[4px_4px_0px_0px_#fff] transition"
+                className="inline-block px-6 py-3 bg-black text-white hover:bg-white hover:text-black font-black uppercase text-sm border-2 border-black shadow-[4px_4px_0px_0px_#fff] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_#fff] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
               >
                 Return to Dashboard
               </Link>
+              {feedback?.nextTierId && (
+                <Link
+                  href={`/tier/${feedback.nextTierId}`}
+                  className="inline-block px-6 py-3 bg-[#00f0ff] text-black hover:bg-white font-black uppercase text-sm border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
+                >
+                  Proceed to Tier {tier.tierNumber + 1} &rarr;
+                </Link>
+              )}
             </div>
           </div>
         ) : isTierCompleted ? (
@@ -313,7 +324,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
             <div className="pt-2 flex justify-center gap-4">
               <Link
                 href="/dashboard"
-                className="inline-block px-6 py-3 bg-black text-white hover:bg-white hover:text-black font-black uppercase text-sm border-2 border-black shadow-[4px_4px_0px_0px_#000] transition"
+                className="inline-block px-6 py-3 bg-black text-white hover:bg-white hover:text-black font-black uppercase text-sm border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
               >
                 Return to Dashboard
               </Link>
@@ -342,7 +353,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
                 {questions.some((q) => !q.isSolved) && (
                   <button
                     onClick={handleNextQuestion}
-                    className="mt-2 px-5 py-2.5 bg-black text-white hover:bg-[#00f0ff] hover:text-black font-black uppercase text-xs border-2 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer"
+                    className="mt-2 px-5 py-2.5 bg-black text-white hover:bg-[#00f0ff] hover:text-black font-black uppercase text-xs border-2 border-black shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
                   >
                     Next Unsolved Question &rarr;
                   </button>
@@ -369,7 +380,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
                   <button
                     type="submit"
                     disabled={isSubmitting || !answerInput.trim()}
-                    className="w-full sm:w-auto px-8 py-4 bg-[#00f0ff] hover:bg-black hover:text-white text-black font-black text-sm uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_#000] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="w-full sm:w-auto px-8 py-4 bg-[#00f0ff] text-black font-black text-sm uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isSubmitting ? "Validating Server-Side..." : "Submit Answer [ Enter ]"}
                   </button>
@@ -406,7 +417,7 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
                     {!feedback.tierCompleted && (
                       <button
                         onClick={handleNextQuestion}
-                        className="px-4 py-2 bg-black text-white hover:bg-white hover:text-black font-black text-xs uppercase border border-black shadow-[2px_2px_0px_0px_#000] transition cursor-pointer"
+                        className="px-4 py-2 bg-black text-white hover:bg-white hover:text-black font-black text-xs uppercase border border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
                       >
                         Next Question &rarr;
                       </button>

@@ -54,7 +54,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     const teamTierMap = new Map(allTeamTiers.map((tt) => [tt.tierId, tt]));
 
     const dashboardTiers: DashboardTier[] = [];
-    let previousTierCompleted = true; // Tier 1 defaults to unlocked if preceding is completed (or initial)
+    let previousTierCleared = true; // Tier 1 defaults to unlocked if preceding is completed/failed (or initial)
 
     for (let i = 0; i < allTiers.length; i++) {
       const tier = allTiers[i];
@@ -114,7 +114,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
           computedStatus = "UNLOCKED";
         }
       } else if (tier.tierNumber > 1) {
-        if (previousTierCompleted && computedStatus === "LOCKED") {
+        if (previousTierCleared && computedStatus === "LOCKED") {
           computedStatus = "UNLOCKED";
         }
       }
@@ -132,7 +132,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
       let unlockRequirement: string | undefined = undefined;
       if (computedStatus === "LOCKED") {
-        unlockRequirement = `🔒 Complete Tier ${tier.tierNumber - 1}`;
+        unlockRequirement = `🔒 Complete or attempt Tier ${tier.tierNumber - 1}`;
       }
 
       dashboardTiers.push({
@@ -149,7 +149,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         unlockRequirement,
       });
 
-      previousTierCompleted = computedStatus === "COMPLETED";
+      previousTierCleared = computedStatus === "COMPLETED" || computedStatus === "FAILED";
     }
 
     return {
@@ -242,7 +242,7 @@ export async function getTierQuestionDetails(
       }
     }
 
-    // Double-guard: For Tier > 1, verify previous tier is COMPLETED
+    // Double-guard: For Tier > 1, verify previous tier is COMPLETED or FAILED
     if (tierRecord.tierNumber > 1) {
       const [prevTier] = await db
         .select()
@@ -257,7 +257,7 @@ export async function getTierQuestionDetails(
           .where(and(eq(teamTiers.teamId, team.id), eq(teamTiers.tierId, prevTier.id)))
           .limit(1);
 
-        if (!prevTeamTier || prevTeamTier.status !== "COMPLETED") {
+        if (!prevTeamTier || (prevTeamTier.status !== "COMPLETED" && prevTeamTier.status !== "FAILED")) {
           return { redirect: true };
         }
       }

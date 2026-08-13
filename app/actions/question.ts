@@ -17,6 +17,7 @@ export interface SubmitAnswerResult {
   reward?: number;
   tierCompleted?: boolean;
   nextTierId?: string | null;
+  nextTierUnlocked?: boolean;
   retriesRemaining?: number;
   tierFailed?: boolean;
   error?: string;
@@ -135,10 +136,10 @@ export async function submitAnswer({
           .where(and(eq(teamTiers.teamId, team.id), eq(teamTiers.tierId, prevTier.id)))
           .limit(1);
 
-        if (!prevTeamTier || prevTeamTier.status !== "COMPLETED") {
+        if (!prevTeamTier || (prevTeamTier.status !== "COMPLETED" && prevTeamTier.status !== "FAILED")) {
           return {
             success: false,
-            error: "Tier access denied. Complete previous tier first.",
+            error: "Tier access denied. Complete or attempt previous tier first.",
           };
         }
       }
@@ -295,11 +296,67 @@ export async function submitAnswer({
           })
           .where(eq(teamTiers.id, teamTierRecord.id));
 
+        let nextTierId: string | null = null;
+        let nextTierUnlocked = false;
+
+        if (tierFailed) {
+          // Unlock next tier automatically when current tier fails (exhausted 2 retries)
+          const [currentTierInfo] = await tx
+            .select({ tierNumber: tiers.tierNumber })
+            .from(tiers)
+            .where(eq(tiers.id, questionRecord.tierId))
+            .limit(1);
+
+          if (currentTierInfo) {
+            const [nextTierRecord] = await tx
+              .select()
+              .from(tiers)
+              .where(eq(tiers.tierNumber, currentTierInfo.tierNumber + 1))
+              .limit(1);
+
+            if (nextTierRecord) {
+              nextTierId = nextTierRecord.id;
+              nextTierUnlocked = true;
+              const [nextTeamTier] = await tx
+                .select()
+                .from(teamTiers)
+                .where(
+                  and(
+                    eq(teamTiers.teamId, team.id),
+                    eq(teamTiers.tierId, nextTierRecord.id)
+                  )
+                )
+                .limit(1);
+
+              if (nextTeamTier) {
+                if (nextTeamTier.status === "LOCKED") {
+                  await tx
+                    .update(teamTiers)
+                    .set({
+                      status: "UNLOCKED",
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(teamTiers.id, nextTeamTier.id));
+                }
+              } else {
+                await tx.insert(teamTiers).values({
+                  teamId: team.id,
+                  tierId: nextTierRecord.id,
+                  status: "UNLOCKED",
+                  retriesRemaining: 2,
+                });
+              }
+            }
+          }
+        }
+
         return {
           success: true,
           isCorrect: false,
           retriesRemaining: newRetries,
           tierFailed,
+          nextTierId,
+          nextTierUnlocked,
         };
       }
     });
