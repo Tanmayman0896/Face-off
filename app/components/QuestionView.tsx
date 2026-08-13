@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import FootballLogo from "./FootballLogo";
@@ -10,6 +10,8 @@ import { submitAnswer, SubmitAnswerResult } from "@/app/actions/question";
 interface QuestionViewProps {
   initialData: TierQuestionPageData;
 }
+
+const QUESTIONS_PER_PAGE = 10;
 
 export default function QuestionView({ initialData }: QuestionViewProps) {
   const router = useRouter();
@@ -25,6 +27,19 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState<number>(
     firstUnsolvedIdx >= 0 ? firstUnsolvedIdx : 0
   );
+
+  const totalPages = Math.ceil(questions.length / QUESTIONS_PER_PAGE) || 1;
+  const [currentPage, setCurrentPage] = useState<number>(() =>
+    Math.floor((firstUnsolvedIdx >= 0 ? firstUnsolvedIdx : 0) / QUESTIONS_PER_PAGE) + 1
+  );
+
+  // Auto-sync page number when active question index changes
+  useEffect(() => {
+    const requiredPage = Math.floor(activeQuestionIndex / QUESTIONS_PER_PAGE) + 1;
+    if (requiredPage !== currentPage && requiredPage <= totalPages) {
+      setCurrentPage(requiredPage);
+    }
+  }, [activeQuestionIndex, totalPages]);
 
   const [answerInput, setAnswerInput] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -123,14 +138,6 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
             </div>
 
             <Link
-              href="/marketplace"
-              className="px-3 py-1.5 bg-[#00f0ff] hover:bg-black hover:text-white text-black border-2 border-black shadow-[3px_3px_0px_0px_#000] text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-1"
-            >
-              <span>⚽</span>
-              <span>Marketplace</span>
-            </Link>
-
-            <Link
               href="/dashboard"
               className="px-3 py-1.5 bg-white hover:bg-black hover:text-white text-black border-2 border-black shadow-[3px_3px_0px_0px_#000] text-xs font-black uppercase tracking-wider transition cursor-pointer"
             >
@@ -171,32 +178,103 @@ export default function QuestionView({ initialData }: QuestionViewProps) {
             </div>
           </div>
 
-          {/* Question Selector Tabs */}
-          <div className="flex gap-2">
-            {questions.map((q, idx) => {
-              const isActive = idx === activeQuestionIndex;
-              const isSolved = q.isSolved;
+          {/* Question Selector Tabs & Pagination */}
+          <div className="space-y-3 pt-1">
+            {/* Pagination Controls Bar */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 border-2 border-black">
+                <div className="text-xs font-mono font-bold uppercase text-slate-700 flex items-center gap-2">
+                  <span className="bg-black text-white px-2 py-0.5 text-[11px] font-mono shadow-[1px_1px_0px_0px_#ccff00]">
+                    PAGE {currentPage} OF {totalPages}
+                  </span>
+                  <span className="text-[11px]">
+                    (Q{(currentPage - 1) * QUESTIONS_PER_PAGE + 1} - Q
+                    {Math.min(currentPage * QUESTIONS_PER_PAGE, questions.length)})
+                  </span>
+                </div>
 
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => {
-                    setActiveQuestionIndex(idx);
-                    setFeedback(null);
-                    setAnswerInput("");
-                  }}
-                  className={`flex-1 py-2 px-3 text-xs font-black border-2 border-black shadow-[3px_3px_0px_0px_#000] transition ${
-                    isActive
-                      ? "bg-[#00f0ff] text-black"
-                      : isSolved
-                      ? "bg-[#ccff00]/60 text-black hover:bg-[#ccff00]"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  Q{idx + 1} {isSolved ? "✓" : `(+$${q.reward})`}
-                </button>
-              );
-            })}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
+                  >
+                    &larr; Prev
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                    const isCurrent = pageNum === currentPage;
+                    const pageStartIdx = (pageNum - 1) * QUESTIONS_PER_PAGE;
+                    const pageEndIdx = Math.min(pageNum * QUESTIONS_PER_PAGE, questions.length);
+                    const pageQuestions = questions.slice(pageStartIdx, pageEndIdx);
+                    const allSolved =
+                      pageQuestions.length > 0 && pageQuestions.every((q) => q.isSolved);
+
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-2.5 py-1 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_#000] transition cursor-pointer ${
+                          isCurrent
+                            ? "bg-[#00f0ff] text-black"
+                            : allSolved
+                            ? "bg-[#ccff00]/60 text-black hover:bg-[#ccff00]"
+                            : "bg-white text-black hover:bg-slate-200"
+                        }`}
+                      >
+                        {pageNum} {allSolved && "✓"}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    className="px-2.5 py-1 text-xs font-black uppercase border-2 border-black bg-white hover:bg-black hover:text-white transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black shadow-[2px_2px_0px_0px_#000] cursor-pointer"
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Question Buttons Grid (10 per page) */}
+            <div className="grid grid-cols-2 min-[440px]:grid-cols-5 sm:grid-cols-10 gap-2">
+              {questions
+                .slice((currentPage - 1) * QUESTIONS_PER_PAGE, currentPage * QUESTIONS_PER_PAGE)
+                .map((q, localIdx) => {
+                  const globalIdx = (currentPage - 1) * QUESTIONS_PER_PAGE + localIdx;
+                  const isActive = globalIdx === activeQuestionIndex;
+                  const isSolved = q.isSolved;
+
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveQuestionIndex(globalIdx);
+                        setFeedback(null);
+                        setAnswerInput("");
+                      }}
+                      className={`py-2 px-1 text-center font-black border-2 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer ${
+                        isActive
+                          ? "bg-[#00f0ff] text-black"
+                          : isSolved
+                          ? "bg-[#ccff00]/60 text-black hover:bg-[#ccff00]"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      <div className="text-xs truncate">Q{globalIdx + 1}</div>
+                      <div className="text-[10px] opacity-90 font-mono truncate">
+                        {isSolved ? "✓" : `+$${q.reward}`}
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         </div>
 

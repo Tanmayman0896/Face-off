@@ -22,6 +22,43 @@ export interface SubmitAnswerResult {
   error?: string;
 }
 
+function validateAnswer(submitted: string, correct: string): boolean {
+  const normSub = (submitted || "").trim().toLowerCase();
+  const normCorr = (correct || "").trim().toLowerCase();
+
+  if (!normSub) return false;
+  if (normSub === normCorr) return true;
+
+  // Handle "(or ...)" e.g. "1/6 (or 16.67%)" or "75% (or 3/4)"
+  if (normCorr.includes("(or ")) {
+    const parts = normCorr
+      .split(/\s*\(or\s*|\)\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.some((p) => normSub === p || normSub.replace(/[%]/g, "") === p.replace(/[%]/g, ""))) {
+      return true;
+    }
+  }
+
+  // Handle unit suffix removal (e.g. "6 seconds" -> "6", "12 years old" -> "12")
+  const commonUnitsRegex = /\b(seconds|matches|degrees|degree|days|times|years old|years|km\/h|kmh|minutes|cats|cents|place|cubes|students|weighings|rungs)\b/gi;
+  const cleanCorr = normCorr.replace(commonUnitsRegex, "").trim();
+  const cleanSub = normSub.replace(commonUnitsRegex, "").trim();
+
+  if (cleanSub && cleanSub === cleanCorr) {
+    return true;
+  }
+
+  // Handle list formatting e.g. "1, 2, and 3" vs "1, 2, 3" vs "1,2,3"
+  const normalizeList = (str: string) =>
+    str.replace(/\band\b/g, "").replace(/[^a-z0-9]/gi, " ").replace(/\s+/g, " ").trim();
+  if (normalizeList(normSub) === normalizeList(normCorr)) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function submitAnswer({
   questionId,
   answer,
@@ -107,10 +144,8 @@ export async function submitAnswer({
       }
     }
 
-    // 4. Validate answer (Case-insensitive & trimmed)
-    const normalizedSubmitted = (answer || "").trim().toLowerCase();
-    const normalizedCorrect = questionRecord.answer.trim().toLowerCase();
-    const isCorrect = normalizedSubmitted === normalizedCorrect;
+    // 4. Validate answer (Flexible case-insensitive & unit-tolerant)
+    const isCorrect = validateAnswer(answer, questionRecord.answer);
 
     // 5. Execute DB Transaction
     const result = await db.transaction(async (tx) => {

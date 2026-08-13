@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { teams, players, teamPlayers } from "@/db/schema";
 import { getAuthSession, getCurrentTeam } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface BuyPlayerResult {
   success: boolean;
@@ -27,7 +27,21 @@ export async function buyPlayerAction(playerId: string): Promise<BuyPlayerResult
 
     // Perform atomic database transaction
     const result = await db.transaction(async (tx) => {
-      // 1. Fetch player record from DB
+      // 1. Check current owned players count (Max squad size: 7)
+      const ownedRecords = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(teamPlayers)
+        .where(eq(teamPlayers.teamId, team.id));
+
+      const ownedCount = Number(ownedRecords[0]?.count ?? 0);
+      if (ownedCount >= 7) {
+        return {
+          success: false,
+          error: "Squad complete! You can only buy and own a maximum of 7 players.",
+        };
+      }
+
+      // 2. Fetch player record from DB
       const [playerRecord] = await tx
         .select()
         .from(players)
@@ -38,7 +52,7 @@ export async function buyPlayerAction(playerId: string): Promise<BuyPlayerResult
         return { success: false, error: "Player not found in catalog." };
       }
 
-      // 2. Fetch fresh team balance
+      // 3. Fetch fresh team balance
       const [freshTeam] = await tx
         .select({ balance: teams.balance })
         .from(teams)
@@ -49,7 +63,7 @@ export async function buyPlayerAction(playerId: string): Promise<BuyPlayerResult
         return { success: false, error: "Team record not found." };
       }
 
-      // 3. Check if team already owns this player
+      // 4. Check if team already owns this player
       const [existingOwned] = await tx
         .select()
         .from(teamPlayers)

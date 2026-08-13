@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx db/seed.ts"
+    "db:seed": "tsx db/seed.ts",
+    "test:tier1": "tsx scripts/verify-tier1-questions.ts",
+    "test:tier2": "tsx scripts/verify-tier2-questions.ts",
+    "test:tier3": "tsx scripts/verify-tier3-questions.ts",
+    "test:all": "npm run test:tier1 && npm run test:tier2 && npm run test:tier3"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

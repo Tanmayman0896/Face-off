@@ -192,9 +192,9 @@ export default function MarketplaceView({
               <span className="block text-[10px] sm:text-xs uppercase tracking-wider font-black text-slate-600 mb-0.5">
                 SQUAD PLAYERS
               </span>
-              <div className="bg-[#ccff00] px-3 py-1.5 border-3 border-black shadow-[4px_4px_0px_0px_#000] text-lg sm:text-xl font-black flex items-center justify-center gap-1.5">
+              <div className={`px-3 py-1.5 border-3 border-black shadow-[4px_4px_0px_0px_#000] text-lg sm:text-xl font-black flex items-center justify-center gap-1.5 ${ownedCount >= 7 ? 'bg-[#ff4d4d] text-white' : 'bg-[#ccff00] text-black'}`}>
                 <span>⚽</span>
-                <span>{ownedCount} / {players.length}</span>
+                <span>{ownedCount} / 7</span>
               </div>
             </div>
 
@@ -451,12 +451,19 @@ export default function MarketplaceView({
                       <div className="w-full py-2.5 bg-[#ccff00] text-black font-black uppercase text-xs text-center border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center justify-center gap-1.5">
                         <span>✓ IN YOUR SQUAD</span>
                       </div>
+                    ) : ownedCount >= 7 ? (
+                      <button
+                        disabled
+                        className="w-full py-2.5 bg-slate-200 text-slate-500 font-black uppercase text-xs border-2 border-black shadow-[2px_2px_0px_0px_#000] cursor-not-allowed opacity-80"
+                      >
+                        [ Squad Complete (7/7) ]
+                      </button>
                     ) : canAfford ? (
                       <button
                         onClick={() => setSelectedPlayer(player)}
                         className="w-full py-2.5 bg-[#00f0ff] hover:bg-black hover:text-white text-black font-black uppercase text-xs border-2 border-black shadow-[3px_3px_0px_0px_#000] transition cursor-pointer"
                       >
-                        [ Buy Player - ${player.price} ]
+                        [ Buy Player - ${player.price.toLocaleString()} ]
                       </button>
                     ) : (
                       <button
