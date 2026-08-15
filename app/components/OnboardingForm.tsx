@@ -17,7 +17,7 @@ interface OnboardingFormProps {
 export default function OnboardingForm({ userId, email }: OnboardingFormProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { showLoading } = useLoading();
+  const { showLoading, hideLoading } = useLoading();
 
   useGSAP(
     () => {
@@ -50,7 +50,11 @@ export default function OnboardingForm({ userId, email }: OnboardingFormProps) {
             <form
               action={async () => {
                 showLoading("SIGNING OUT...");
-                await signOutAction();
+                try {
+                  await signOutAction();
+                } finally {
+                  hideLoading();
+                }
               }}
             >
               <button
@@ -81,7 +85,17 @@ export default function OnboardingForm({ userId, email }: OnboardingFormProps) {
             action={async (formData) => {
               setIsSubmitting(true);
               showLoading("REGISTERING TEAM & UNLOCKING TIER 1...");
-              await completeOnboarding(formData);
+              try {
+                const result = await completeOnboarding(formData);
+                if (result?.error) {
+                  hideLoading();
+                  setIsSubmitting(false);
+                }
+              } catch (err) {
+                hideLoading();
+                setIsSubmitting(false);
+                throw err;
+              }
             }}
             className="space-y-5"
           >

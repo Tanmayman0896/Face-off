@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db } from "@/db";
+import { dbPool } from "@/db";
 import { teams, tiers, questions, teamTiers, questionAttempts, teamQuestionRewards } from "@/db/schema";
 import { getAuthSession, getCurrentTeam } from "@/lib/auth";
 import { eq, and, sql, inArray } from "drizzle-orm";
@@ -149,7 +149,7 @@ export async function submitAnswer({
     const isCorrect = validateAnswer(answer, questionRecord.answer);
 
     // 5. Execute DB Transaction
-    const result = await db.transaction(async (tx) => {
+    const result = await dbPool.transaction(async (tx) => {
       // Record attempt
       await tx.insert(questionAttempts).values({
         teamId: team.id,

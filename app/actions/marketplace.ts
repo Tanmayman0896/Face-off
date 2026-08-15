@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db } from "@/db";
+import { dbPool } from "@/db";
 import { teams, players, teamPlayers } from "@/db/schema";
 import { getAuthSession, getCurrentTeam } from "@/lib/auth";
 import { eq, and, sql } from "drizzle-orm";
@@ -26,7 +26,7 @@ export async function buyPlayerAction(playerId: string): Promise<BuyPlayerResult
     }
 
     // Perform atomic database transaction
-    const result = await db.transaction(async (tx) => {
+    const result = await dbPool.transaction(async (tx) => {
       // 1. Check current owned players count (Max squad size: 7)
       const ownedRecords = await tx
         .select({ count: sql<number>`count(*)::int` })

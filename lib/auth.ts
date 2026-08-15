@@ -86,13 +86,26 @@ export async function getCurrentTeam() {
     return null;
   }
 
-  const teamList = await db
-    .select()
-    .from(teams)
-    .where(eq(teams.authUserId, session.userId))
-    .limit(1);
+  // Transient network hiccups to Neon are common in dev; retry before failing
+  let teamList;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      teamList = await db
+        .select()
+        .from(teams)
+        .where(eq(teams.authUserId, session.userId))
+        .limit(1);
+      lastError = undefined;
+      break;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+    }
+  }
+  if (lastError) throw lastError;
 
-  if (teamList.length === 0) {
+  if (!teamList || teamList.length === 0) {
     return null;
   }
 
