@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { LoadingProvider } from "@/app/context/LoadingContext";
 import PageNavigationLoader from "@/app/components/PageNavigationLoader";
 import TransitionProvider from "@/app/components/TransitionProvider";
+import { OfflineSyncProvider } from "@/app/components/OfflineSyncProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,10 +33,12 @@ export default function RootLayout({
       <body className="antialiased">
         <LoadingProvider>
           <TransitionProvider>
-            <Suspense fallback={null}>
-              <PageNavigationLoader />
-            </Suspense>
-            {children}
+            <OfflineSyncProvider>
+              <Suspense fallback={null}>
+                <PageNavigationLoader />
+              </Suspense>
+              {children}
+            </OfflineSyncProvider>
           </TransitionProvider>
         </LoadingProvider>
       </body>

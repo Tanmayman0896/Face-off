@@ -27,16 +27,16 @@ export interface DashboardData {
   tiers: DashboardTier[];
 }
 
-export async function getDashboardData(): Promise<DashboardData | null> {
+export async function getDashboardData(): Promise<{ data: DashboardData | null; offline: boolean }> {
   try {
     const session = await getAuthSession();
     if (!session?.userId) {
-      return null;
+      return { data: null, offline: false };
     }
 
     const team = await getCurrentTeam();
     if (!team) {
-      return null;
+      return { data: null, offline: false };
     }
 
     // Fetch all tiers ordered by tierNumber
@@ -153,19 +153,23 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     }
 
     return {
-      team: {
-        id: team.id,
-        teamName: team.teamName,
-        teamLeaderName: team.teamLeaderName,
-        balance: team.balance,
+      data: {
+        team: {
+          id: team.id,
+          teamName: team.teamName,
+          teamLeaderName: team.teamLeaderName,
+          balance: team.balance,
+        },
+        tiers: dashboardTiers,
       },
-      tiers: dashboardTiers,
+      offline: false,
     };
   } catch (error) {
     console.error("Error in getDashboardData:", error);
-    return null;
+    return { data: null, offline: true };
   }
 }
+
 
 export interface SafeQuestion {
   id: string;
