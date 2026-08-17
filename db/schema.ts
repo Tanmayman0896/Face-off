@@ -14,7 +14,7 @@ export const teams = pgTable("teams", {
   id: uuid("id").defaultRandom().primaryKey(),
   authUserId: varchar("auth_user_id", { length: 255 }).notNull().unique(),
   teamName: varchar("team_name", { length: 255 }).notNull(),
-  teamLeaderName: varchar("team_leader_name", { length: 255 }).notNull(),
+  teamLeaderName: varchar("team_leader_name", { length: 255 }),
   balance: integer("balance").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -1,20 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { signInAction } from "@/app/actions/auth";
 import FootballLogo from "@/app/components/FootballLogo";
-import { useTransitionRouter } from "next-transition-router";
 
 gsap.registerPlugin(useGSAP);
 
 export default function LandingHero() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const router = useTransitionRouter();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useGSAP(
     () => {
@@ -36,28 +30,6 @@ export default function LandingHero() {
     { scope: containerRef }
   );
 
-  async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setErrorMessage(null);
-
-    const formData = new FormData(e.currentTarget);
-    const result = await signInAction(formData);
-
-    if (result.success) {
-      setShowAuthModal(false);
-      if (result.redirectUrl && result.redirectUrl !== "/") {
-        router.push(result.redirectUrl);
-      } else {
-        // If remaining on root (e.g. going to OnboardingForm), refresh page view
-        router.refresh();
-      }
-    } else {
-      setErrorMessage(result.error || "Authentication failed. Please try again.");
-      setIsSubmitting(false);
-    }
-  }
-
   return (
     <div
       ref={containerRef}
@@ -72,15 +44,6 @@ export default function LandingHero() {
           </span>
         </div>
 
-        <button
-          onClick={() => {
-            setErrorMessage(null);
-            setShowAuthModal(true);
-          }}
-          className="px-5 py-2 bg-[#00f0ff] text-black font-extrabold text-xs sm:text-sm uppercase tracking-wider border-3 border-black shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
-        >
-          Sign In / Register
-        </button>
       </header>
 
       {/* Hero Body */}
@@ -152,62 +115,7 @@ export default function LandingHero() {
         </div>
       </main>
 
-      {/* Auth Modal Overlay */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="relative w-full max-w-md p-7 bg-white border-4 border-black shadow-[10px_10px_0px_0px_#000]">
-            <button
-              onClick={() => {
-                if (!isSubmitting) setShowAuthModal(false);
-              }}
-              disabled={isSubmitting}
-              className="absolute top-4 right-4 bg-[#ff4d4d] border-2 border-black font-black text-white w-8 h-8 flex items-center justify-center hover:bg-black hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
-            >
-              ✕
-            </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <FootballLogo size="sm" />
-              <h2 className="text-xl font-black uppercase tracking-tight">
-                PLAYER SIGN IN
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm font-bold text-slate-700 mb-6">
-              Enter your email or player identifier to start onboarding.
-            </p>
-
-            {errorMessage && (
-              <div className="mb-4 p-3 bg-red-100 border-2 border-red-500 text-red-900 font-bold text-xs">
-                {errorMessage}
-              </div>
-            )}
-
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-2">
-                  Player Email / ID
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="leader@cyberknights.io"
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 bg-[#f4f3ef] border-3 border-black text-black font-mono font-bold placeholder-slate-400 focus:outline-none focus:bg-white transition text-sm disabled:opacity-50"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 bg-[#ffe600] text-black font-black text-sm uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? "AUTHENTICATING..." : "AUTHENTICATE →"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

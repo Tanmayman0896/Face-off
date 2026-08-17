@@ -82,10 +82,9 @@ export async function completeOnboarding(formData: FormData): Promise<AuthAction
     }
 
     const teamName = formData.get("teamName")?.toString().trim();
-    const teamLeaderName = formData.get("teamLeaderName")?.toString().trim();
 
-    if (!teamName || !teamLeaderName) {
-      return { success: false, error: "Team Name and Team Leader Name are required." };
+    if (!teamName) {
+      return { success: false, error: "Team Name is required." };
     }
 
     // Prevent duplicate team creation for the same authUserId
@@ -107,7 +106,6 @@ export async function completeOnboarding(formData: FormData): Promise<AuthAction
       .values({
         authUserId: session.userId,
         teamName,
-        teamLeaderName,
         balance: 0,
       })
       .returning();

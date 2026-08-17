@@ -132,21 +132,6 @@ export default function OnboardingForm({ userId, email }: OnboardingFormProps) {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-black uppercase tracking-wider mb-2">
-                Team Leader Name <span className="text-[#ff4d4d]">*</span>
-              </label>
-              <input
-                type="text"
-                name="teamLeaderName"
-                placeholder="e.g. ALEX MERCER"
-                required
-                minLength={2}
-                maxLength={50}
-                disabled={isSubmitting}
-                className="w-full px-4 py-3 bg-[#f4f3ef] border-3 border-black text-black font-bold placeholder-slate-400 focus:outline-none focus:bg-white transition disabled:opacity-50"
-              />
-            </div>
 
             <div className="pt-2">
               <button
