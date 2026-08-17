@@ -1,14 +1,20 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import { quickLoginAction } from "@/app/actions/auth";
+import { useTransitionRouter } from "next-transition-router";
 import FootballLogo from "@/app/components/FootballLogo";
 
 gsap.registerPlugin(useGSAP);
 
 export default function LandingHero() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useTransitionRouter();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useGSAP(
     () => {
@@ -65,9 +71,7 @@ export default function LandingHero() {
         {/* CTA Action */}
         <div className="mt-7">
           <button
-            onClick={() => {
-              // TODO: wire up auth flow
-            }}
+            onClick={() => setShowAuthModal(true)}
             className="px-8 py-3.5 bg-[#ffe600] text-black font-black text-base sm:text-lg uppercase tracking-wider border-4 border-black shadow-[5px_5px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[7px_7px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
           >
             ENTER THE CHALLENGE &rarr;
@@ -114,8 +118,64 @@ export default function LandingHero() {
         </div>
       </main>
 
-
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_#000] p-6 sm:p-8 w-full max-w-md relative">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 text-black hover:text-[#ff4d4d] transition-colors"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 className="text-2xl font-black uppercase tracking-tight mb-2">
+              ENTER TEAM NAME
+            </h2>
+            <p className="text-sm font-bold text-slate-700 mb-6">
+              Enter your team name to login or create a new team.
+            </p>
+            {errorMessage && (
+              <div className="mb-4 p-3 bg-red-100 border-2 border-red-500 text-red-900 font-bold text-xs">
+                {errorMessage}
+              </div>
+            )}
+            <form
+              action={async (formData) => {
+                setIsSubmitting(true);
+                setErrorMessage(null);
+                const result = await quickLoginAction(formData);
+                if (result.success) {
+                  router.push(result.redirectUrl || "/dashboard");
+                } else {
+                  setErrorMessage(result.error || "Failed to login");
+                  setIsSubmitting(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <input
+                  type="text"
+                  name="teamName"
+                  placeholder="e.g. CYBER KNIGHTS"
+                  required
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-[#f4f3ef] border-3 border-black text-black font-bold placeholder-slate-400 focus:outline-none focus:bg-white transition disabled:opacity-50"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-[#ffe600] text-black font-black text-base uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 transition-all cursor-pointer"
+              >
+                {isSubmitting ? "LOADING..." : "START →"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

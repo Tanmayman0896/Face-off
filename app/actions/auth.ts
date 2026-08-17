@@ -13,6 +13,79 @@ export interface AuthActionResult {
   redirectUrl?: string;
 }
 
+export async function quickLoginAction(formData: FormData): Promise<AuthActionResult> {
+  try {
+    const teamName = formData.get("teamName")?.toString().trim();
+
+    if (!teamName) {
+      return { success: false, error: "Team Name is required." };
+    }
+
+    // Check if team exists
+    const existingTeam = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.teamName, teamName))
+      .limit(1);
+
+    if (existingTeam.length > 0) {
+      // Login as existing team
+      await createAuthSession(existingTeam[0].authUserId);
+      revalidatePath("/");
+      revalidatePath("/dashboard");
+      return { success: true, redirectUrl: "/dashboard" };
+    }
+
+    // Create new team
+    const userId = `user_${crypto.randomUUID()}`;
+    await createAuthSession(userId);
+
+    const [newTeam] = await db
+      .insert(teams)
+      .values({
+        authUserId: userId,
+        teamName,
+        balance: 0,
+      })
+      .returning();
+
+    // Setup initial tiers for new team
+    const allTiers = await db
+      .select()
+      .from(tiers)
+      .orderBy(asc(tiers.tierNumber));
+
+    if (allTiers.length > 0) {
+      const teamTierValues = allTiers.map((t) => {
+        const isTier1 = t.tierNumber === 1;
+        return {
+          teamId: newTeam.id,
+          tierId: t.id,
+          status: isTier1 ? "UNLOCKED" : "LOCKED",
+          retriesRemaining: 2,
+        };
+      });
+
+      await db.insert(teamTiers).values(teamTierValues);
+    }
+
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+    revalidatePath("/marketplace");
+
+    return {
+      success: true,
+      redirectUrl: "/dashboard",
+    };
+  } catch (error: any) {
+    console.error("Error in quickLoginAction:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to login. Please try again.",
+    };
+  }
+}
+
 export async function signInAction(formData: FormData): Promise<AuthActionResult> {
   try {
     const email = formData.get("email")?.toString().trim();

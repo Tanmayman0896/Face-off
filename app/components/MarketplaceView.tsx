@@ -9,6 +9,7 @@ import SignOutButton from "./SignOutButton";
 import FaceoffPreloader from "./FaceoffPreloader";
 import { useLoading } from "@/app/context/LoadingContext";
 import { buyPlayerAction } from "@/app/actions/marketplace";
+import { signOutAction } from "@/app/actions/auth";
 
 export interface PlayerData {
   id: string;
@@ -140,10 +141,15 @@ export default function MarketplaceView({
           );
         }
 
-        setTimeout(() => {
-          setSelectedPlayer(null);
-          setFeedback(null);
-          setIsSubmitting(false);
+        setTimeout(async () => {
+          if (ownedCount + 1 >= 7) {
+            await signOutAction();
+            window.location.href = "/";
+          } else {
+            setSelectedPlayer(null);
+            setFeedback(null);
+            setIsSubmitting(false);
+          }
         }, 1500);
       } else {
         setFeedback({
