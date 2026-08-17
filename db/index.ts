@@ -9,10 +9,13 @@ let _db: NeonHttpDatabase<typeof schema> | null = null;
 
 function getDb(): NeonHttpDatabase<typeof schema> {
   if (!_db) {
-    const connectionString = process.env.DATABASE_URL;
+    let connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error("DATABASE_URL environment variable is not set");
     }
+    // Strip surrounding quotes if present (e.g. if loaded raw from .env)
+    connectionString = connectionString.replace(/^['"]|['"]$/g, '');
+    
     _db = drizzle(neon(connectionString), { schema });
   }
   return _db;
