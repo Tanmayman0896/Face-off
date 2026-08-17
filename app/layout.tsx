@@ -5,6 +5,7 @@ import "./globals.css";
 import { Suspense } from "react";
 import { LoadingProvider } from "@/app/context/LoadingContext";
 import PageNavigationLoader from "@/app/components/PageNavigationLoader";
+import TransitionProvider from "@/app/components/TransitionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,13 +31,16 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased">
         <LoadingProvider>
-          <Suspense fallback={null}>
-            <PageNavigationLoader />
-          </Suspense>
-          {children}
+          <TransitionProvider>
+            <Suspense fallback={null}>
+              <PageNavigationLoader />
+            </Suspense>
+            {children}
+          </TransitionProvider>
         </LoadingProvider>
       </body>
     </html>
   );
 }
+
 

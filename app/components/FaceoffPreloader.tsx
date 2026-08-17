@@ -11,12 +11,14 @@ interface FaceoffPreloaderProps {
   message?: string;
   variant?: "fullscreen" | "section" | "inline";
   className?: string;
+  onDismiss?: () => void;
 }
 
 export default function FaceoffPreloader({
   message = "LOADING FACE-OFF MATCH DATA...",
   variant = "fullscreen",
   className = "",
+  onDismiss,
 }: FaceoffPreloaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +30,7 @@ export default function FaceoffPreloader({
         { rotation: 0 },
         {
           rotation: 360,
-          duration: 2.5,
+          duration: 2.2,
           repeat: -1,
           ease: "none",
         }
@@ -40,7 +42,7 @@ export default function FaceoffPreloader({
         { y: 0 },
         {
           y: -8,
-          duration: 0.6,
+          duration: 0.5,
           repeat: -1,
           yoyo: true,
           ease: "power1.inOut",
@@ -52,13 +54,22 @@ export default function FaceoffPreloader({
         ".preloader-bar-fill",
         { width: "15%" },
         {
-          width: "92%",
-          duration: 1.4,
+          width: "95%",
+          duration: 1.2,
           repeat: -1,
           yoyo: true,
           ease: "power2.inOut",
         }
       );
+
+      // Fullscreen card pop in
+      if (variant === "fullscreen") {
+        gsap.fromTo(
+          ".preloader-modal-card",
+          { scale: 0.92, opacity: 0, y: 15 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.25, ease: "power2.out" }
+        );
+      }
     },
     { scope: containerRef }
   );
@@ -110,9 +121,10 @@ export default function FaceoffPreloader({
   return (
     <div
       ref={containerRef}
+      id="faceoff-fullscreen-preloader"
       className={`fixed inset-0 z-[9999] bg-[#f4f3ef]/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 selection:bg-[#ffe600] selection:text-black ${className}`}
     >
-      <div className="relative bg-white border-4 border-black p-8 sm:p-10 shadow-[12px_12px_0px_0px_#000] max-w-md w-full text-center space-y-6">
+      <div className="preloader-modal-card relative bg-white border-4 border-black p-8 sm:p-10 shadow-[12px_12px_0px_0px_#000] max-w-md w-full text-center space-y-6">
         {/* Top Header Badge */}
         <div className="flex items-center justify-between border-b-3 border-black pb-4">
           <span className="px-3 py-1 bg-[#00f0ff] text-black border-2 border-black font-mono font-black text-xs uppercase tracking-wider shadow-[2px_2px_0px_0px_#000]">
@@ -121,6 +133,15 @@ export default function FaceoffPreloader({
           <span className="px-3 py-1 bg-[#ccff00] text-black border-2 border-black font-mono font-black text-xs uppercase tracking-wider shadow-[2px_2px_0px_0px_#000]">
             STADIUM LOADING
           </span>
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              title="Close loader"
+              className="text-xs font-black bg-[#ff4d4d] text-white px-2 py-0.5 border border-black hover:bg-black transition cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Logo & Headline */}
@@ -157,4 +178,5 @@ export default function FaceoffPreloader({
     </div>
   );
 }
+
 
