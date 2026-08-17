@@ -157,7 +157,7 @@ export async function getDashboardData(): Promise<{ data: DashboardData | null; 
         team: {
           id: team.id,
           teamName: team.teamName,
-          teamLeaderName: team.teamLeaderName,
+          teamLeaderName: team.teamLeaderName ?? "",
           balance: team.balance,
         },
         tiers: dashboardTiers,
@@ -439,7 +439,7 @@ export async function getMarketplaceData(): Promise<MarketplaceData | null> {
       team: {
         id: team.id,
         teamName: team.teamName,
-        teamLeaderName: team.teamLeaderName,
+        teamLeaderName: team.teamLeaderName ?? "",
         balance: team.balance,
       },
       players: mappedPlayers,

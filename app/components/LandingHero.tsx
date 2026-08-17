@@ -66,8 +66,7 @@ export default function LandingHero() {
         <div className="mt-7">
           <button
             onClick={() => {
-              setErrorMessage(null);
-              setShowAuthModal(true);
+              // TODO: wire up auth flow
             }}
             className="px-8 py-3.5 bg-[#ffe600] text-black font-black text-base sm:text-lg uppercase tracking-wider border-4 border-black shadow-[5px_5px_0px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[7px_7px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
           >
